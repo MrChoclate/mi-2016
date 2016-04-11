@@ -26,7 +26,7 @@ double gaussrand() {
 	return X;
 }
 
-Particle pick_particle(int Np, Particle* particles) {
+Particle pick_particle(const int Np, Particle* particles) {
 	double random = (double) rand() / RAND_MAX;
 	double weight_sum = 0;
 	int i = 0;

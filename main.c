@@ -2,15 +2,12 @@
 #include <stdio.h>
 #include "types.h"
 #include "particle.h"
+#include "input.h"
 
 int main(int argc, char const *argv[]) {
-  printf("Hello world !\n");
+  int n_finger_prints;
 
-  Particle* particles = create_particles(10000, 90., 15.);
-  for (int i = 0; i < 10000; i++) {
-    printf("Particle{x=%f, y=%f, weight=%f}\n", particles[i].x, particles[i].y, particles[i].weight);
-  }
-  free(particles);
+  read_finger_prints("map.csv", &n_finger_prints);
 
   return 0;
 }

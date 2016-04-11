@@ -12,6 +12,6 @@ double gaussrand();
 /**
  * Pick a particle based on the weight
  **/
-Particle pick_particle(int Np, Particle* particles);
+Particle pick_particle(const int Np, Particle* particles);
 
 #endif
