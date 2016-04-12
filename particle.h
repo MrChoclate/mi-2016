@@ -19,6 +19,6 @@ double euclidian_distance(int n_obs, double* rssi, FingerPrint finger_print);
 double effective_sample_size(const int Np, Particle* particles);
 Particle* resample(const int Np, Particle* particles);
 Position estimate(const int Np, Particle* particles);
-Position* particle_filter(const int Np, double width, double height, int n_finger_prints, FingerPrint* finger_prints, int k_iteration, double* angle, double* distance, int n_obs, double** rssi, double variance);
+Position* particle_filter(const int Np, double width, double height, int n_finger_prints, FingerPrint* finger_prints, int k_iteration, Data* datas, double variance);
 
 #endif

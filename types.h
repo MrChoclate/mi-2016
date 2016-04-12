@@ -32,6 +32,12 @@ struct Position {
 };
 typedef struct Position Position;
 
+struct Data {
+  double angle, distance;
+  double* rssi;
+};
+typedef struct Data Data;
+
 Orientation get_orientation_code(char* name);
 RSSI get_rssi_code(char* name);
 

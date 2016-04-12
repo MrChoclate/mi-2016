@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <assert.h>
 #include <float.h>
@@ -32,8 +33,8 @@ Particle* create_particles(const int Np, const double width, const double height
 
 void update_particle(const int Np, Particle* particles, const double angle, const double distance, const double variance) {
   for (int i = 0; i < Np; i++) {
-    particles[i].x += distance * cos(angle) + gaussrand() * sqrt(variance);
-    particles[i].y += distance * sin(angle) + gaussrand() * sqrt(variance);
+    particles[i].x += distance * cos(angle * 3.1415 / 180) + gaussrand() * sqrt(variance);
+    particles[i].y += distance * sin(angle * 3.1415 / 180) + gaussrand() * sqrt(variance);
   }
 }
 
@@ -52,13 +53,16 @@ int find_closest_finger_print(Particle p, int n_finger_prints, FingerPrint* fing
 }
 
 double euclidian_distance(int n_obs, double* rssi, FingerPrint finger_print) {
-  double dist = DBL_MIN;  // distance > 0 since we will divide by it
+  double dist = 0;
+  int count = 0;
 
   for (int i = 0; i < n_obs; i++) {
-    if(finger_print.rssi[i] != 0)  // We recorded this rssi
+    if(finger_print.rssi[i] != 0) {  // We recorded this rssi
       dist += (rssi[i] - finger_print.rssi[i]) * (rssi[i] - finger_print.rssi[i]);
+      count += 1;
+    }
   }
-  return sqrt(dist);
+  return sqrt(dist / count);
 }
 
 void normalize_weight(const int Np, Particle* particles) {
@@ -109,20 +113,46 @@ Position estimate(const int Np, Particle* particles) {
   Position pos = {.x=0, .y=0};
 
   for (int i = 0; i < Np; i++) {
-    pos.x = particles[i].x * particles[i].weight;
-    pos.y = particles[i].y * particles[i].weight;
+    pos.x += particles[i].x * particles[i].weight;
+    pos.y += particles[i].y * particles[i].weight;
   }
 
   return pos;
 }
 
-Position* particle_filter(const int Np, double width, double height, int n_finger_prints, FingerPrint* finger_prints, int k_iteration, double* angle, double* distance, int n_obs, double** rssi, double variance) {
+Orientation get_orientation(double angle) {
+  angle += 90;  // angle is now positive
+  angle -= 360.0/16;  // quarter will be centered
+  int quarters = angle / (360.0/8);
+  assert(quarters >= 0);
+  assert(quarters < 8);
+  return quarters;
+}
+
+FingerPrint** sort_finger_prints(int n_finger_prints, FingerPrint* finger_prints) {
+  assert(n_finger_prints % 8 == 0);
+  FingerPrint** array = malloc(sizeof(FingerPrint*) * 8);
+  for (int i = 0; i < 8; i++) {
+    array[i] = malloc(sizeof(FingerPrint) * n_finger_prints / 8);
+  }
+  int indices[8] = {0};
+
+  for (int i = 0; i < n_finger_prints; i++) {
+    array[finger_prints[i].orientation][indices[finger_prints[i].orientation]] = finger_prints[i];
+    indices[finger_prints[i].orientation] += 1;
+  }
+  return array;
+}
+
+Position* particle_filter(const int Np, double width, double height, int n_finger_prints, FingerPrint* finger_prints, int k_iteration, Data* datas, double variance) {
   Position* estimations = malloc(sizeof(Position) * k_iteration);
   Particle* particles = create_particles(Np, width, height);
 
+  FingerPrint** sorted = sort_finger_prints(n_finger_prints, finger_prints);
+
   for (int k = 0; k < k_iteration; k++) {
-    update_particle(Np, particles, angle[k], distance[k], variance);
-    update_weight(Np, particles, n_obs, rssi[k], n_finger_prints, finger_prints);
+    update_particle(Np, particles, datas[k].angle, datas[k].distance, variance);
+    update_weight(Np, particles, N_RSSI, datas[k].rssi, n_finger_prints / 8, sorted[get_orientation(datas[k].angle)]);
     estimations[k] = estimate(Np, particles);
 
     if(effective_sample_size(Np, particles) <= Np/2) {

@@ -5,10 +5,11 @@
 
 double* parse_rssi(const char *data) {
   double* rssi = malloc(sizeof(double) * N_RSSI);
-
   char rssi_name[100];
-  int rssi_value, n;
-  while(sscanf(data, "%[^{}:]:%d;%n", rssi_name, &rssi_value, &n) == 2) {
+  double rssi_value;
+  int n;
+
+  while(sscanf(data, "%[^{}:]:%lf;%n", rssi_name, &rssi_value, &n) == 2) {
     data += n;
     rssi[get_rssi_code(rssi_name)] = rssi_value;
   }
@@ -47,4 +48,36 @@ FingerPrint* read_finger_prints(const char* filename, int* n_finger_prints) {
   }
   fclose(fp);
   return finger_prints;
+}
+
+Data* read_data(const char *filename, int* n_data) {
+  double angle, distance;
+  char rssis[100];
+  int i = 0;
+  FILE *fp = fopen(filename, "r");
+  assert(fp != NULL);
+
+  // Count the number of line
+  char ch;
+  *n_data = 0;
+  do {
+    ch = fgetc(fp);
+    if (ch == '\n')
+      *n_data += 1;
+  } while (ch != EOF);
+  rewind(fp);  // reset file position indicator
+
+  // Parse the input
+  Data* datas = malloc(sizeof(Data) * (*n_data));
+  while(fscanf(fp, "%lf;%lf;%s", &angle, &distance, rssis) == 3) {
+
+    datas[i] = (Data) {
+      .angle=angle,
+      .distance=distance,
+      .rssi=parse_rssi(rssis)
+    };
+    i++;
+  }
+  fclose(fp);
+  return datas;
 }
