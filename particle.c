@@ -3,6 +3,7 @@
 #include <math.h>
 #include <assert.h>
 #include <float.h>
+#include <omp.h>
 #include "types.h"
 #include "random.h"
 
@@ -32,10 +33,20 @@ Particle* create_particles(const int Np, const double width, const double height
 }
 
 void update_particle(const int Np, Particle* particles, const double angle, const double distance, const double variance) {
+  double random;
+  int nthread = omp_get_num_threads();
+  int* seed = init_seed(nthread);
+  int rank;
+
+  #pragma omp parallel for schedule(static) private(random, rank)
   for (int i = 0; i < Np; i++) {
-    particles[i].x += distance * cos(angle * 3.1415 / 180) + gaussrand() * sqrt(variance);
-    particles[i].y += distance * sin(angle * 3.1415 / 180) + gaussrand() * sqrt(variance);
+    rank = omp_get_thread_num();
+    random = gaussrand(seed, rank);
+    particles[i].x += distance * cos(angle * 3.1415 / 180) + random * sqrt(variance);
+    random = gaussrand(seed, rank);
+    particles[i].y += distance * sin(angle * 3.1415 / 180) + random * sqrt(variance);
   }
+  free(seed);
 }
 
 int find_closest_finger_print(Particle p, int n_finger_prints, FingerPrint* finger_prints) {
@@ -67,9 +78,11 @@ double euclidian_distance(int n_obs, double* rssi, FingerPrint finger_print) {
 
 void normalize_weight(const int Np, Particle* particles) {
   double weight_sum = 0;
+  #pragma omp parallel for schedule(static) reduction(+:weight_sum)
   for (int i = 0; i < Np; i++) {
     weight_sum += particles[i].weight;
   }
+  #pragma omp parallel for schedule(static)
   for (int i = 0; i < Np; i++) {
     particles[i].weight /= weight_sum;
   }
@@ -78,6 +91,7 @@ void normalize_weight(const int Np, Particle* particles) {
 void update_weight(const int Np, Particle* particles, int n_obs, double* rssi, int n_finger_prints, FingerPrint* finger_prints) {
   int finger_print_indice;
   double dist;
+  #pragma omp parallel for schedule(static) private(finger_print_indice, dist)
   for (int i = 0; i < Np; i++) {
     finger_print_indice = find_closest_finger_print(particles[i], n_finger_prints, finger_prints);
 
@@ -93,6 +107,7 @@ void update_weight(const int Np, Particle* particles, int n_obs, double* rssi, i
 
 double effective_sample_size(const int Np, Particle* particles) {
   double square_weight_sum = 0;
+  #pragma omp parallel for schedule(static) reduction(+:square_weight_sum)
   for (int i = 0; i < Np; i++) {
     square_weight_sum += particles[i].weight * particles[i].weight;
   }
@@ -101,6 +116,7 @@ double effective_sample_size(const int Np, Particle* particles) {
 
 Particle* resample(const int Np, Particle* particles) {
   Particle *new_particles = malloc(Np * sizeof(Particle));
+  #pragma omp parallel for schedule(static)
   for (int i = 0; i < Np; i++) {
     new_particles[i] = pick_particle(Np, particles);
     new_particles[i].weight = 1. / Np;
@@ -110,14 +126,14 @@ Particle* resample(const int Np, Particle* particles) {
 }
 
 Position estimate(const int Np, Particle* particles) {
-  Position pos = {.x=0, .y=0};
-
+  double x = 0.0, y = 0.0;
+  #pragma omp parallel for schedule(static) reduction(+:x,y)
   for (int i = 0; i < Np; i++) {
-    pos.x += particles[i].x * particles[i].weight;
-    pos.y += particles[i].y * particles[i].weight;
+    x += particles[i].x * particles[i].weight;
+    y += particles[i].y * particles[i].weight;
   }
 
-  return pos;
+  return (Position) {.x=x, .y=y};
 }
 
 Orientation get_orientation(double angle) {

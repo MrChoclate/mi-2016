@@ -137,7 +137,7 @@ void precision(Position *estimates) {
       }
       d_avg += d;
       count += 1;
-      printf("%lf\n", d);
+      printf("%lf %lf %lf\n", d, (estimates[i].x - true_position[i].x), (estimates[i].y - true_position[i].y));
     }
   }
   d_avg /= count;

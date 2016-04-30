@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include "types.h"
 
+
+int* init_seed(int n);
+
 /**
  * Generate a N(0, 1) sample
 **/

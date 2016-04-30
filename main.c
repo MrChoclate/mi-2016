@@ -5,6 +5,7 @@
 #include "input.h"
 #include "output.h"
 
+
 int main(int argc, char const *argv[]) {
   int n_finger_prints;
   int n_data;
@@ -12,12 +13,8 @@ int main(int argc, char const *argv[]) {
   FingerPrint* finger_prints = read_finger_prints("map.csv", &n_finger_prints);
   Data* datas = read_data("data.csv", &n_data);
 
-  Position* estimates = particle_filter(100000, 1.0, 1.0, n_finger_prints, finger_prints, n_data, datas,  0.2);
-  /*
-  for (size_t i = 0; i < n_data; i++) {
-    printf("%lf %lf\n", estimates[i].x, estimates[i].y);
-  }
-  */
+  Position* estimates = particle_filter(100000, 5.0, 5.0, n_finger_prints, finger_prints, n_data, datas,  0.05);
+
   precision(estimates);
 
   return 0;

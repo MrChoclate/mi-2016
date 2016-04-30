@@ -1,30 +1,40 @@
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+#include <limits.h>
 #include "types.h"
 
-double gaussrand() {
-	static double V1, V2, S;
-	static int phase = 0;
-	double X;
 
-	if(phase == 0) {
-		do {
-			double U1 = (double) rand() / RAND_MAX;
-			double U2 = (double) rand() / RAND_MAX;
+#define PI acos(-1)
 
-			V1 = 2 * U1 - 1;
-			V2 = 2 * U2 - 1;
-			S = V1 * V1 + V2 * V2;
-			} while(S >= 1 || S == 0);
 
-		X = V1 * sqrt(-2 * log(S) / S);
-	} else
-		X = V2 * sqrt(-2 * log(S) / S);
+long M = INT_MAX;
+int A = 1103515245;
+int C = 12345;
 
-	phase = 1 - phase;
-
-	return X;
+int* init_seed(int n) {
+		int* seed = malloc(sizeof(int) *n);
+		for (int i = 0; i < n; i++) {
+			seed[i] = time(0) * i;
+		}
+		return seed;
 }
+
+double randu(int* seed, int index)
+{
+	int num = A*seed[index] + C;
+	seed[index] = num % M;
+	return fabs(seed[index]/((double) M));
+}
+
+double gaussrand(int * seed, int index){
+	double u = randu(seed, index);
+	double v = randu(seed, index);
+	double cosine = cos(2*PI*v);
+	double rt = -2*log(u);
+	return sqrt(rt)*cosine;
+}
+
 
 Particle pick_particle(const int Np, Particle* particles) {
 	double random = (double) rand() / RAND_MAX;
